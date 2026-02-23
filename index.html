@@ -44,7 +44,7 @@ canvas{
 </head>
 <body>
 
-<audio id="bgm" src="song.mp3" loop></audio>
+<audio id="bgm" src="song.mp3" loop preload="none"></audio>
 <div id="fade"></div>
 <div id="endingText"></div>
 
@@ -57,26 +57,38 @@ canvas{
 let scene=new THREE.Scene();
 let camera=new THREE.PerspectiveCamera(75,window.innerWidth/window.innerHeight,0.1,3000);
 let renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 renderer.setSize(window.innerWidth,window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
 camera.position.z=100;
 
-/* Bloom */
-const composer=new THREE.EffectComposer(renderer);
-composer.addPass(new THREE.RenderPass(scene,camera));
-const bloom=new THREE.UnrealBloomPass(
-  new THREE.Vector2(window.innerWidth,window.innerHeight),
-  2.2,0.4,0.85
-);
-composer.addPass(bloom);
+/* Adaptive performance settings */
+const isMobile = /Mobi|Android/i.test(navigator.userAgent);
+const saveData = (navigator.connection && navigator.connection.saveData) || false;
+const effectiveType = (navigator.connection && navigator.connection.effectiveType) || '';
+const lowBandwidth = /2g/.test(effectiveType);
+const PARTICLE_COUNT = (isMobile || saveData || lowBandwidth) ? 8000 : 25000;
+const usePostProcessing = !(isMobile || saveData || lowBandwidth);
+
+/* Bloom (only on capable devices) */
+let composer = null;
+if(usePostProcessing && THREE.EffectComposer){
+  composer = new THREE.EffectComposer(renderer);
+  composer.addPass(new THREE.RenderPass(scene,camera));
+  const bloom=new THREE.UnrealBloomPass(
+    new THREE.Vector2(window.innerWidth,window.innerHeight),
+    2.2,0.4,0.85
+  );
+  composer.addPass(bloom);
+}
 
 /* Galaxy */
 let galaxy, galaxyMaterial;
 (function(){
   const geo=new THREE.BufferGeometry();
   const pos=[];
-  for(let i=0;i<25000;i++){
+  for(let i=0;i<PARTICLE_COUNT;i++){
     let r=Math.random()*70;
     let branch=(i%4)/4*Math.PI*2;
     let spin=r*0.5;
@@ -109,22 +121,19 @@ tinyStar.visible=false;
 scene.add(tinyStar);
 
 /* Vedanshi Image with Glow */
-let texture=new THREE.TextureLoader().load("us2.jpg");
-let imageMaterial=new THREE.MeshBasicMaterial({
-  map:texture,
-  transparent:true
-});
-let imagePlane=new THREE.Mesh(
-  new THREE.PlaneGeometry(22,22),
-  imageMaterial
-);
+let imageMaterial=new THREE.MeshBasicMaterial({transparent:true});
+let imagePlane=new THREE.Mesh(new THREE.PlaneGeometry(22,22), imageMaterial);
 imagePlane.position.set(0,-20,0);
 imagePlane.visible=false;
+imagePlane.userData.textureLoaded = false;
 scene.add(imagePlane);
 
 /* Audio */
 const bgm=document.getElementById("bgm");
-document.body.addEventListener("click",()=>bgm.play());
+document.body.addEventListener("click",()=>{
+  // play will trigger load since preload="none"
+  try{ bgm.play(); }catch(e){ /* user gesture required on some browsers */ }
+});
 
 /* Ending Text */
 const ending=document.getElementById("endingText");
@@ -158,6 +167,15 @@ window.addEventListener("scroll",()=>{
     finalStar.visible=true;
     imagePlane.visible=true;
     ending.style.opacity=1;
+
+    // lazy-load image texture when needed
+    if(!imagePlane.userData.textureLoaded){
+      new THREE.TextureLoader().load('us2.jpg', function(tex){
+        imagePlane.material.map = tex;
+        imagePlane.material.needsUpdate = true;
+        imagePlane.userData.textureLoaded = true;
+      });
+    }
 
     if(!typingStarted){
       typingStarted=true;
@@ -216,7 +234,11 @@ function animate(){
 
   galaxy.rotation.y+=0.0003;
 
-  composer.render();
+  if(composer){
+    composer.render();
+  } else {
+    renderer.render(scene, camera);
+  }
 }
 animate();
 </script>
