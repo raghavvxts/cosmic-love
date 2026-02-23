@@ -4,253 +4,223 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Vedanshi ♊</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Poppins:wght@300;400;500&display=swap" rel="stylesheet">
+
 <style>
-body{margin:0;overflow:hidden;background:black;font-family:Georgia, serif;}
+body{
+  margin:0;
+  overflow:hidden;
+  background:black;
+  font-family:'Poppins',sans-serif;
+  color:#ffb6d9;
+}
+
 canvas{position:fixed;top:0;left:0;}
 
+#fadeBlack{
+  position:fixed;
+  inset:0;
+  background:black;
+  opacity:1;
+  transition:opacity 3s ease;
+  z-index:10;
+}
+
 #ui{
-  position:absolute;inset:0;display:flex;
-  flex-direction:column;align-items:center;justify-content:center;
-  text-align:center;color:gold;z-index:5;
+  position:absolute;
+  inset:0;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  opacity:0;
+  transition:opacity 3s ease;
+  z-index:5;
 }
 
 #photo{
-  width:230px;height:230px;border-radius:50%;
+  width:240px;
+  height:240px;
+  border-radius:50%;
   background:url("us2.jpg") center/cover no-repeat;
-  margin-bottom:20px;
-  animation:photoGlow 3s infinite alternate;
-  transition:transform 1.5s ease;
+  margin-bottom:30px;
+  box-shadow:0 0 100px rgba(255,105,180,1);
 }
 
-@keyframes photoGlow{
-  from{box-shadow:0 0 30px gold;}
-  to{box-shadow:0 0 90px gold;}
+h1{
+  font-family:'Playfair Display',serif;
+  font-size:50px;
+  letter-spacing:2px;
 }
 
-h1{font-size:30px;margin:10px;text-shadow:0 0 20px gold;}
-
-button{
-  padding:14px 28px;font-size:18px;border:none;
-  border-radius:40px;cursor:pointer;margin:10px;
-  transition:all .3s ease;
-}
-
-#yes{background:linear-gradient(45deg,#facc15,#f59e0b);color:black;}
-#yes:hover{box-shadow:0 0 40px gold;}
-#no{background:#444;color:white;}
-#message{margin-top:15px;font-size:18px;color:#f87171;}
-
-#finalText{
-  position:absolute;top:10%;width:100%;
-  text-align:center;font-size:48px;color:gold;
-  opacity:0;transition:opacity 3s ease;
-  text-shadow:0 0 80px gold;
+#movieTitle{
+  position:absolute;
+  bottom:10%;
+  width:100%;
+  text-align:center;
+  font-size:60px;
+  font-family:'Playfair Display',serif;
+  letter-spacing:3px;
+  opacity:0;
+  transition:opacity 4s ease;
+  z-index:6;
 }
 </style>
 </head>
 <body>
 
-<audio id="music" src="song.mp3"></audio>
+<div id="fadeBlack"></div>
 
 <div id="ui">
   <div id="photo"></div>
-  <h1>Vedanshi ♊</h1>
-  <h1>Will you be my prom date this Valentine?</h1>
-  <div>
-    <button id="yes">Okiee Yaawr! 💛</button>
-    <button id="no">No</button>
-  </div>
-  <div id="message"></div>
+  <h1>Will you be my prom date?</h1>
 </div>
 
-<div id="finalText">She Said Yes 💛</div>
+<div id="movieTitle">A Cosmic Love Story</div>
+
+<audio id="music" src="song.mp3"></audio>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128/examples/js/postprocessing/EffectComposer.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128/examples/js/postprocessing/RenderPass.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128/examples/js/postprocessing/UnrealBloomPass.js"></script>
 
 <script>
 let scene=new THREE.Scene();
-let camera=new THREE.PerspectiveCamera(75,window.innerWidth/window.innerHeight,0.1,2000);
+let camera=new THREE.PerspectiveCamera(75,window.innerWidth/window.innerHeight,0.1,5000);
 let renderer=new THREE.WebGLRenderer({antialias:true});
 renderer.setSize(window.innerWidth,window.innerHeight);
 document.body.appendChild(renderer.domElement);
-camera.position.z=200;
 
-/* STARFIELD */
-const geo=new THREE.BufferGeometry();
-const pos=[];
-for(let i=0;i<50000;i++){
-  let r=Math.random()*200;
-  let branch=(i%4)/4*Math.PI*2;
-  let spin=r*0.5;
-  pos.push(
-    Math.cos(branch+spin)*r,
-    (Math.random()-0.5)*100,
-    Math.sin(branch+spin)*r
-  );
+camera.position.z=600;
+
+/* BLOOM */
+const composer=new THREE.EffectComposer(renderer);
+composer.addPass(new THREE.RenderPass(scene,camera));
+const bloom=new THREE.UnrealBloomPass(
+  new THREE.Vector2(window.innerWidth,window.innerHeight),
+  1.5,0.5,0.85
+);
+composer.addPass(bloom);
+
+/* STARS */
+function createStars(count,spread,size,color){
+  const geo=new THREE.BufferGeometry();
+  const pos=[];
+  for(let i=0;i<count;i++){
+    pos.push(
+      (Math.random()-0.5)*spread,
+      (Math.random()-0.5)*spread,
+      (Math.random()-0.5)*spread
+    );
+  }
+  geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+  const mat=new THREE.PointsMaterial({size:size,color:color});
+  const stars=new THREE.Points(geo,mat);
+  scene.add(stars);
+  return stars;
 }
-geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
-const mat=new THREE.PointsMaterial({size:0.7,color:0xffffff});
-const galaxy=new THREE.Points(geo,mat);
-galaxy.rotation.x=0.5;
-scene.add(galaxy);
 
-/* ARROW */
+let outerStars=createStars(50000,3000,2,0xff99cc);
+let haloStars=createStars(30000,1000,3,0xff4da6);
+
+/* CUPID */
+const bow=new THREE.Mesh(
+  new THREE.TorusGeometry(120,5,16,100,Math.PI),
+  new THREE.MeshBasicMaterial({color:0xff4da6})
+);
+scene.add(bow);
+
 let arrow=new THREE.Mesh(
-  new THREE.CylinderGeometry(1,1,60,12),
+  new THREE.CylinderGeometry(5,5,400,16),
   new THREE.MeshBasicMaterial({color:0xffffff})
 );
 arrow.rotation.z=Math.PI/2;
-arrow.position.set(-150,80,0);
-arrow.visible=false;
+arrow.position.set(-1500,0,0);
 scene.add(arrow);
 
-/* HEART */
-let heartStars=[];
-function createHeart(){
-  const material=new THREE.MeshBasicMaterial({color:0xffd700});
-  for(let t=0;t<Math.PI*2;t+=0.08){
-    let x=16*Math.pow(Math.sin(t),3);
-    let y=13*Math.cos(t)-5*Math.cos(2*t)-2*Math.cos(3*t)-Math.cos(4*t);
-    let star=new THREE.Mesh(
-      new THREE.SphereGeometry(2.5,16,16),
-      material
-    );
-    star.position.set(x*4,y*4+30,0);
-    scene.add(star);
-    heartStars.push(star);
-  }
+let time=0;
+let fired=false;
+let impact=false;
+let slowMotion=false;
 
-  starExplosion();
-  heartbeat();
-}
-
-/* STAR EXPLOSION */
-function starExplosion(){
-  for(let i=0;i<150;i++){
+/* STAR BURST */
+function burst(){
+  for(let i=0;i<600;i++){
     let star=new THREE.Mesh(
-      new THREE.SphereGeometry(1.5,8,8),
-      new THREE.MeshBasicMaterial({color:0xffd700})
+      new THREE.SphereGeometry(6,8,8),
+      new THREE.MeshBasicMaterial({color:0xff4da6})
     );
-    star.position.set(0,30,0);
+    star.position.set(0,0,0);
     scene.add(star);
 
-    let dx=(Math.random()-0.5)*10;
-    let dy=(Math.random()-0.5)*10;
+    let dx=(Math.random()-0.5)*80;
+    let dy=(Math.random()-0.5)*80;
+    let dz=(Math.random()-0.5)*80;
 
     let life=setInterval(()=>{
       star.position.x+=dx;
       star.position.y+=dy;
-      star.material.opacity-=0.04;
+      star.position.z+=dz;
+      star.material.opacity-=0.02;
       star.material.transparent=true;
       if(star.material.opacity<=0){
         scene.remove(star);
         clearInterval(life);
       }
-    },20);
+    },30);
   }
 }
 
-/* HEARTBEAT BASS */
-const audioCtx=new (window.AudioContext||window.webkitAudioContext)();
-function heartbeat(){
-  const osc=audioCtx.createOscillator();
-  const gain=audioCtx.createGain();
-  osc.type="sine";
-  osc.frequency.value=45;
-  gain.gain.value=0.6;
-  osc.connect(gain);
-  gain.connect(audioCtx.destination);
-  osc.start();
-  osc.stop(audioCtx.currentTime+0.2);
-}
-
-/* SCREEN SHAKE */
-let shakeIntensity=0;
-function triggerShake(){
-  shakeIntensity=10;
-}
-
-/* SLOW MOTION CONTROL */
-let slowMotion=false;
-let slowFactor=1;
-
-/* ANIMATE */
-let zoom=false;
-let pulse=0;
-
+/* ANIMATION */
 function animate(){
   requestAnimationFrame(animate);
 
-  let speed=slowMotion?0.3:1;
+  let speed=slowMotion?0.2:1;
+  time+=0.01*speed;
 
-  galaxy.rotation.y+=0.002*speed;
+  camera.position.x=Math.sin(time*0.2)*800;
+  camera.lookAt(0,0,0);
 
-  pulse+=0.05*speed;
-  heartStars.forEach(star=>{
-    let scale=1+Math.sin(pulse)*0.25;
-    star.scale.set(scale,scale,scale);
-  });
+  haloStars.rotation.y+=0.003*speed;
+  outerStars.rotation.y+=0.001*speed;
 
-  if(zoom) camera.position.z-=3*speed;
+  bow.scale.set(1+Math.sin(time*3)*0.1,1+Math.sin(time*3)*0.1,1);
 
-  /* screen shake */
-  if(shakeIntensity>0){
-    camera.position.x+=(Math.random()-0.5)*shakeIntensity;
-    camera.position.y+=(Math.random()-0.5)*shakeIntensity;
-    shakeIntensity*=0.85;
+  if(time>5 && !fired){
+    fired=true;
   }
 
-  renderer.render(scene,camera);
+  if(fired && arrow.position.x<0){
+    arrow.position.x+=40*speed;
+  }
+
+  if(fired && arrow.position.x>=0 && !impact){
+    impact=true;
+    slowMotion=true;
+    burst();
+    setTimeout(()=>{
+      slowMotion=false;
+      document.getElementById("fadeBlack").style.opacity=1;
+      setTimeout(()=>{
+        document.getElementById("ui").style.opacity=1;
+        document.getElementById("movieTitle").style.opacity=1;
+        document.getElementById("fadeBlack").style.opacity=0;
+      },2000);
+    },1500);
+  }
+
+  composer.render();
 }
 animate();
 
-/* BUTTONS */
-let noClicks=0;
-const noBtn=document.getElementById("no");
-const yesBtn=document.getElementById("yes");
-const message=document.getElementById("message");
-const finalText=document.getElementById("finalText");
-
-noBtn.onclick=function(){
-  noClicks++;
-
-  if(noClicks==1){
-    message.innerText="Are you sure? 🥺";
-  }else if(noClicks==2){
-    message.innerText="Really?? 😭";
-  }else{
-    message.innerText="You are evil 😤";
-    noBtn.style.opacity="0";
-    noBtn.style.transform="scale(0) rotate(720deg)";
-    setTimeout(()=>noBtn.remove(),1000);
-  }
-
-  yesBtn.style.transform="scale("+(1+noClicks*0.4)+")";
-};
-
-yesBtn.onclick=function(){
+/* fade in from black at start */
+setTimeout(()=>{
+  document.getElementById("fadeBlack").style.opacity=0;
   document.getElementById("music").play();
-  document.getElementById("photo").style.transform="scale(1.5)";
-  arrow.visible=true;
-
-  let shoot=setInterval(()=>{
-    arrow.position.x+=10;
-    if(arrow.position.x>0){
-      clearInterval(shoot);
-
-      slowMotion=true;
-      triggerShake();
-
-      createHeart();
-      zoom=true;
-
-      setTimeout(()=>{
-        slowMotion=false;
-        finalText.style.opacity=1;
-      },1500);
-    }
-  },25);
-};
+},1000);
 </script>
 
 </body>
