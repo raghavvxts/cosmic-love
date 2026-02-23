@@ -46,7 +46,7 @@ canvas{position:fixed;top:0;left:0;}
   border-radius:50%;
   background:url("us2.jpg") center/cover no-repeat;
   margin-bottom:30px;
-  box-shadow:0 0 100px rgba(255,105,180,1);
+  box-shadow:0 0 120px rgba(255,105,180,1);
 }
 
 h1{
@@ -83,9 +83,6 @@ h1{
 <audio id="music" src="song.mp3"></audio>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128/examples/js/postprocessing/EffectComposer.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128/examples/js/postprocessing/RenderPass.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/three@0.128/examples/js/postprocessing/UnrealBloomPass.js"></script>
 
 <script>
 let scene=new THREE.Scene();
@@ -96,16 +93,7 @@ document.body.appendChild(renderer.domElement);
 
 camera.position.z=600;
 
-/* BLOOM */
-const composer=new THREE.EffectComposer(renderer);
-composer.addPass(new THREE.RenderPass(scene,camera));
-const bloom=new THREE.UnrealBloomPass(
-  new THREE.Vector2(window.innerWidth,window.innerHeight),
-  1.5,0.5,0.85
-);
-composer.addPass(bloom);
-
-/* STARS */
+/* STAR FIELD */
 function createStars(count,spread,size,color){
   const geo=new THREE.BufferGeometry();
   const pos=[];
@@ -117,7 +105,12 @@ function createStars(count,spread,size,color){
     );
   }
   geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
-  const mat=new THREE.PointsMaterial({size:size,color:color});
+  const mat=new THREE.PointsMaterial({
+    size:size,
+    color:color,
+    transparent:true,
+    opacity:0.8
+  });
   const stars=new THREE.Points(geo,mat);
   scene.add(stars);
   return stars;
@@ -126,13 +119,25 @@ function createStars(count,spread,size,color){
 let outerStars=createStars(50000,3000,2,0xff99cc);
 let haloStars=createStars(30000,1000,3,0xff4da6);
 
-/* CUPID */
+/* CUPID GLOW */
 const bow=new THREE.Mesh(
   new THREE.TorusGeometry(120,5,16,100,Math.PI),
   new THREE.MeshBasicMaterial({color:0xff4da6})
 );
 scene.add(bow);
 
+/* OUTER GLOW RING (fake bloom) */
+const glowRing=new THREE.Mesh(
+  new THREE.TorusGeometry(140,20,16,100,Math.PI),
+  new THREE.MeshBasicMaterial({
+    color:0xff66b2,
+    transparent:true,
+    opacity:0.3
+  })
+);
+scene.add(glowRing);
+
+/* ARROW */
 let arrow=new THREE.Mesh(
   new THREE.CylinderGeometry(5,5,400,16),
   new THREE.MeshBasicMaterial({color:0xffffff})
@@ -146,9 +151,9 @@ let fired=false;
 let impact=false;
 let slowMotion=false;
 
-/* STAR BURST */
+/* BURST */
 function burst(){
-  for(let i=0;i<600;i++){
+  for(let i=0;i<500;i++){
     let star=new THREE.Mesh(
       new THREE.SphereGeometry(6,8,8),
       new THREE.MeshBasicMaterial({color:0xff4da6})
@@ -174,11 +179,10 @@ function burst(){
   }
 }
 
-/* ANIMATION */
 function animate(){
   requestAnimationFrame(animate);
 
-  let speed=slowMotion?0.2:1;
+  let speed=slowMotion?0.25:1;
   time+=0.01*speed;
 
   camera.position.x=Math.sin(time*0.2)*800;
@@ -187,7 +191,9 @@ function animate(){
   haloStars.rotation.y+=0.003*speed;
   outerStars.rotation.y+=0.001*speed;
 
-  bow.scale.set(1+Math.sin(time*3)*0.1,1+Math.sin(time*3)*0.1,1);
+  let pulse=1+Math.sin(time*3)*0.1;
+  bow.scale.set(pulse,pulse,1);
+  glowRing.scale.set(pulse*1.1,pulse*1.1,1);
 
   if(time>5 && !fired){
     fired=true;
@@ -201,27 +207,31 @@ function animate(){
     impact=true;
     slowMotion=true;
     burst();
+
     setTimeout(()=>{
       slowMotion=false;
+
       document.getElementById("fadeBlack").style.opacity=1;
+
       setTimeout(()=>{
         document.getElementById("ui").style.opacity=1;
         document.getElementById("movieTitle").style.opacity=1;
         document.getElementById("fadeBlack").style.opacity=0;
       },2000);
+
     },1500);
   }
 
-  composer.render();
+  renderer.render(scene,camera);
 }
+
 animate();
 
-/* fade in from black at start */
+/* Intro fade */
 setTimeout(()=>{
   document.getElementById("fadeBlack").style.opacity=0;
   document.getElementById("music").play();
 },1000);
 </script>
-
 </body>
 </html>
