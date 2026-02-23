@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vedanshi ♊</title>
+<style>
+body{
+  margin:0;
+  overflow-x:hidden;
+  background:black;
+  height:520vh;
+}
+canvas{
+  position:fixed;
+  top:0;
+  left:0;
+}
+#fade{
+  position:fixed;
+  inset:0;
+  background:black;
+  opacity:0;
+  pointer-events:none;
+  transition:opacity 4s ease;
+}
+#endingText{
+  position:fixed;
+  inset:0;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  text-align:center;
+  font-size:6vw;
+  color:gold;
+  white-space:pre-line;
+  opacity:0;
+  transition:opacity 3s ease;
+}
+@media(min-width:768px){
+  #endingText{font-size:36px;}
+}
+</style>
+</head>
+<body>
+
+<audio id="bgm" src="song.mp3" loop></audio>
+<div id="fade"></div>
+<div id="endingText"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://threejs.org/examples/js/postprocessing/EffectComposer.js"></script>
+<script src="https://threejs.org/examples/js/postprocessing/RenderPass.js"></script>
+<script src="https://threejs.org/examples/js/postprocessing/UnrealBloomPass.js"></script>
+
+<script>
+let scene=new THREE.Scene();
+let camera=new THREE.PerspectiveCamera(75,window.innerWidth/window.innerHeight,0.1,3000);
+let renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(window.innerWidth,window.innerHeight);
+document.body.appendChild(renderer.domElement);
+
+camera.position.z=100;
+
+/* Bloom */
+const composer=new THREE.EffectComposer(renderer);
+composer.addPass(new THREE.RenderPass(scene,camera));
+const bloom=new THREE.UnrealBloomPass(
+  new THREE.Vector2(window.innerWidth,window.innerHeight),
+  2.2,0.4,0.85
+);
+composer.addPass(bloom);
+
+/* Galaxy */
+let galaxy, galaxyMaterial;
+(function(){
+  const geo=new THREE.BufferGeometry();
+  const pos=[];
+  for(let i=0;i<25000;i++){
+    let r=Math.random()*70;
+    let branch=(i%4)/4*Math.PI*2;
+    let spin=r*0.5;
+    pos.push(
+      Math.cos(branch+spin)*r,
+      (Math.random()-0.5)*3,
+      Math.sin(branch+spin)*r
+    );
+  }
+  geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
+  galaxyMaterial=new THREE.PointsMaterial({size:0.2,color:0xffffff});
+  galaxy=new THREE.Points(geo,galaxyMaterial);
+  scene.add(galaxy);
+})();
+
+/* Final Star */
+let finalStar=new THREE.Mesh(
+  new THREE.SphereGeometry(3,32,32),
+  new THREE.MeshBasicMaterial({color:0xffffff})
+);
+finalStar.visible=false;
+scene.add(finalStar);
+
+/* Tiny Last Star */
+let tinyStar=new THREE.Mesh(
+  new THREE.SphereGeometry(0.8,16,16),
+  new THREE.MeshBasicMaterial({color:0xffffff})
+);
+tinyStar.visible=false;
+scene.add(tinyStar);
+
+/* Vedanshi Image with Glow */
+let texture=new THREE.TextureLoader().load("us2.jpg");
+let imageMaterial=new THREE.MeshBasicMaterial({
+  map:texture,
+  transparent:true
+});
+let imagePlane=new THREE.Mesh(
+  new THREE.PlaneGeometry(22,22),
+  imageMaterial
+);
+imagePlane.position.set(0,-20,0);
+imagePlane.visible=false;
+scene.add(imagePlane);
+
+/* Audio */
+const bgm=document.getElementById("bgm");
+document.body.addEventListener("click",()=>bgm.play());
+
+/* Ending Text */
+const ending=document.getElementById("endingText");
+const endingMessage="In Every Universe...\nIt’s Always You.";
+let typingIndex=0;
+let typingStarted=false;
+
+function typeEnding(){
+  if(typingIndex<endingMessage.length){
+    ending.innerText+=endingMessage[typingIndex];
+    ending.style.textShadow="0 0 "+(10+typingIndex*3)+"px gold";
+    typingIndex++;
+    setTimeout(typeEnding,60);
+  }
+}
+
+/* Scroll */
+const fade=document.getElementById("fade");
+window.addEventListener("scroll",()=>{
+  const scroll=window.scrollY;
+  const h=window.innerHeight;
+  const depth=scroll/(4*h);
+
+  bgm.volume=Math.max(1-depth,0);
+
+  if(scroll>4*h){
+    fade.style.opacity=1;
+  }
+
+  if(scroll>4.5*h){
+    finalStar.visible=true;
+    imagePlane.visible=true;
+    ending.style.opacity=1;
+
+    if(!typingStarted){
+      typingStarted=true;
+      typeEnding();
+    }
+  }
+});
+
+/* Animation */
+let pulse=0;
+let shrinking=false;
+let zooming=false;
+let blinked=false;
+
+function animate(){
+  requestAnimationFrame(animate);
+
+  pulse+=0.05;
+
+  if(finalStar.visible){
+    let beat=1+Math.abs(Math.sin(pulse))*0.3;
+    finalStar.scale.set(beat,beat,beat);
+
+    camera.position.z+=0.15;
+
+    if(camera.position.z>160){
+      shrinking=true;
+    }
+
+    if(shrinking){
+      finalStar.scale.multiplyScalar(0.97);
+      if(finalStar.scale.x<0.05){
+        finalStar.visible=false;
+        tinyStar.visible=true;
+        tinyStar.position.set(0,0,0);
+      }
+    }
+
+    galaxyMaterial.size*=0.999;
+  }
+
+  if(tinyStar.visible && !blinked){
+    tinyStar.material.opacity=Math.abs(Math.sin(pulse*3));
+    tinyStar.material.transparent=true;
+
+    if(pulse>20){
+      blinked=true;
+      tinyStar.visible=false;
+      zooming=true;
+    }
+  }
+
+  if(zooming){
+    imagePlane.scale.multiplyScalar(1.01);
+  }
+
+  galaxy.rotation.y+=0.0003;
+
+  composer.render();
+}
+animate();
+</script>
+</body>
+</html>
