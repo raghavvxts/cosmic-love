@@ -11,12 +11,16 @@
 body{
   margin:0;
   overflow:hidden;
-  background:black;
+  background:#000;
   font-family:'Poppins',sans-serif;
-  color:#d4af37;
+  color:#f8c8dc;
 }
 
-canvas{position:fixed;top:0;left:0;}
+canvas{
+  position:fixed;
+  top:0;
+  left:0;
+}
 
 #ui{
   position:absolute;
@@ -27,6 +31,7 @@ canvas{position:fixed;top:0;left:0;}
   justify-content:center;
   text-align:center;
   z-index:5;
+  transition:opacity 1.5s ease;
 }
 
 #photo{
@@ -34,7 +39,7 @@ canvas{position:fixed;top:0;left:0;}
   height:220px;
   border-radius:50%;
   background:url("us2.jpg") center/cover no-repeat;
-  box-shadow:0 0 40px rgba(255,192,203,0.6);
+  box-shadow:0 0 40px rgba(255,182,193,0.8);
   margin-bottom:30px;
 }
 
@@ -60,20 +65,31 @@ button{
 }
 
 #yes{
-  background:#d4af37;
+  background:#f8c8dc;
   color:black;
 }
 
-#yes:hover{transform:scale(1.08);}
+#yes:hover{
+  transform:scale(1.1);
+}
 
 #no{
   background:#333;
   color:#ccc;
 }
 
-#message{
-  margin-top:15px;
-  color:pink;
+#cosmicYes{
+  position:absolute;
+  top:30%;
+  width:100%;
+  text-align:center;
+  font-family:'Playfair Display',serif;
+  font-size:64px;
+  opacity:0;
+  color:#f8c8dc;
+  text-shadow:0 0 40px rgba(255,182,193,0.8);
+  transition:opacity 2s ease;
+  z-index:6;
 }
 </style>
 </head>
@@ -81,30 +97,29 @@ button{
 
 <audio id="music" src="song.mp3"></audio>
 
+<div id="cosmicYes">A Cosmic Yes.</div>
+
 <div id="ui">
   <div id="photo"></div>
   <h1>Will you be my prom date?</h1>
   <h2>Vedanshi ♊</h2>
   <div>
-    <button id="yes">Okiee Yaawr! 💛</button>
+    <button id="yes">Okiee Yaawr 💗</button>
     <button id="no">No</button>
   </div>
-  <div id="message"></div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
 <script>
 let scene=new THREE.Scene();
-scene.fog=new THREE.Fog(0x000000,500,2000);
-
 let camera=new THREE.PerspectiveCamera(75,window.innerWidth/window.innerHeight,0.1,5000);
 let renderer=new THREE.WebGLRenderer({antialias:true});
 renderer.setSize(window.innerWidth,window.innerHeight);
 document.body.appendChild(renderer.domElement);
 camera.position.z=1000;
 
-/* GOLD STAR FIELD */
+/* STAR FIELD */
 const starGeo=new THREE.BufferGeometry();
 const starCount=40000;
 const positions=[];
@@ -119,69 +134,106 @@ for(let i=0;i<starCount;i++){
 
 starGeo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
 const starMat=new THREE.PointsMaterial({
-  color:0xd4af37,
-  size:2
+  color:0xffffff,
+  size:1.5
 });
 const stars=new THREE.Points(starGeo,starMat);
 scene.add(stars);
 
-/* PINK CUPID CONSTELLATION */
+/* SIMPLE PINK CONSTELLATION CUPID */
 const cupidGeo=new THREE.BufferGeometry();
 const cupidPositions=[];
-
-for(let i=0;i<12000;i++){
+for(let i=0;i<8000;i++){
   let x=Math.random()*400-300;
   let y=Math.random()*300-150;
-  if(x < -100) y+=Math.sin(x*0.05)*60;
-  cupidPositions.push(x,y,Math.random()*50-25);
+  cupidPositions.push(x,y,Math.random()*30-15);
 }
-
 cupidGeo.setAttribute('position',new THREE.Float32BufferAttribute(cupidPositions,3));
 const cupidMat=new THREE.PointsMaterial({
-  color:0xff69b4,
-  size:3
+  color:0xf8c8dc,
+  size:2
 });
 const cupid=new THREE.Points(cupidGeo,cupidMat);
-cupid.position.set(-300,0,0);
+cupid.position.set(-350,0,0);
 scene.add(cupid);
 
-/* SOFT SPOTLIGHT */
-const spotLight=new THREE.SpotLight(0xffd700,1.2);
-spotLight.position.set(-500,800,500);
-spotLight.angle=Math.PI/6;
-spotLight.penumbra=0.5;
-spotLight.target=cupid;
-scene.add(spotLight);
+/* ARROW */
+let arrow=new THREE.Mesh(
+  new THREE.CylinderGeometry(5,5,400,12),
+  new THREE.MeshBasicMaterial({color:0xffffff})
+);
+arrow.rotation.z=Math.PI/4;
+arrow.position.set(-200,-150,0);
+arrow.visible=false;
+scene.add(arrow);
 
-/* ANIMATION */
+/* TRAIL */
+function createTrail(x,y){
+  let star=new THREE.Mesh(
+    new THREE.SphereGeometry(3,6,6),
+    new THREE.MeshBasicMaterial({color:0xf8c8dc})
+  );
+  star.position.set(x,y,0);
+  scene.add(star);
+
+  let fade=setInterval(()=>{
+    star.scale.multiplyScalar(0.9);
+    star.material.opacity-=0.05;
+    star.material.transparent=true;
+    if(star.material.opacity<=0){
+      scene.remove(star);
+      clearInterval(fade);
+    }
+  },30);
+}
+
+let zoom=false;
+let finalState=false;
+
 function animate(){
   requestAnimationFrame(animate);
+
   stars.rotation.y+=0.0005;
-  cupid.rotation.y+=0.0002;
+
+  if(zoom){
+    camera.position.z-=3;
+  }
+
   renderer.render(scene,camera);
 }
 animate();
 
-/* BUTTON LOGIC */
-let noClicks=0;
-const noBtn=document.getElementById("no");
-const yesBtn=document.getElementById("yes");
-const message=document.getElementById("message");
+/* YES CLICK */
+document.getElementById("yes").onclick=function(){
+  document.getElementById("music").play();
+  document.getElementById("ui").style.opacity=0;
+  arrow.visible=true;
 
-noBtn.onclick=function(){
-  noClicks++;
-  if(noClicks==1) message.innerText="Are you sure? 🥺";
-  else if(noClicks==2) message.innerText="Really? 😭";
-  else{
-    message.innerText="You are evil 😤";
-    noBtn.remove();
-  }
-  yesBtn.style.transform="scale("+(1+noClicks*0.3)+")";
+  let shoot=setInterval(()=>{
+    arrow.position.x+=20;
+    arrow.position.y+=20;
+    createTrail(arrow.position.x,arrow.position.y);
+
+    if(arrow.position.x>200){
+      clearInterval(shoot);
+
+      zoom=true;
+      cupid.visible=false;
+
+      setTimeout(()=>{
+        document.getElementById("cosmicYes").style.opacity=1;
+      },800);
+    }
+  },20);
 };
 
-yesBtn.onclick=function(){
-  document.getElementById("music").play();
-  camera.position.z-=200;
+/* NO LOGIC */
+let noClicks=0;
+document.getElementById("no").onclick=function(){
+  noClicks++;
+  if(noClicks==1) alert("Are you sure? 🥺");
+  else if(noClicks==2) alert("Really? 😭");
+  else this.remove();
 };
 </script>
 
