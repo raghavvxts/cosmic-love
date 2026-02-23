@@ -13,7 +13,7 @@ body{
   overflow:hidden;
   background:#000;
   font-family:'Poppins',sans-serif;
-  color:#f8c8dc;
+  color:#f6c1d8;
 }
 
 canvas{
@@ -32,45 +32,47 @@ canvas{
   text-align:center;
   z-index:5;
   transition:opacity 1.5s ease;
+  padding:20px;
 }
 
 #photo{
-  width:220px;
-  height:220px;
+  width:min(28vw,220px);
+  height:min(28vw,220px);
   border-radius:50%;
   background:url("us2.jpg") center/cover no-repeat;
-  box-shadow:0 0 40px rgba(255,182,193,0.8);
-  margin-bottom:30px;
+  box-shadow:0 0 50px rgba(255,182,193,0.9);
+  margin-bottom:25px;
 }
 
 h1{
   font-family:'Playfair Display',serif;
-  font-size:42px;
+  font-size:clamp(28px,4vw,44px);
   margin-bottom:10px;
 }
 
 h2{
+  font-size:clamp(14px,2vw,18px);
   font-weight:300;
   margin-bottom:25px;
 }
 
 button{
-  padding:14px 36px;
+  padding:12px 28px;
   border:none;
   border-radius:40px;
-  font-size:16px;
-  margin:10px;
+  font-size:clamp(14px,1.5vw,16px);
+  margin:8px;
   cursor:pointer;
   transition:0.3s ease;
 }
 
 #yes{
-  background:#f8c8dc;
+  background:#f6c1d8;
   color:black;
 }
 
 #yes:hover{
-  transform:scale(1.1);
+  transform:scale(1.08);
 }
 
 #no{
@@ -84,10 +86,10 @@ button{
   width:100%;
   text-align:center;
   font-family:'Playfair Display',serif;
-  font-size:64px;
+  font-size:clamp(40px,6vw,70px);
   opacity:0;
-  color:#f8c8dc;
-  text-shadow:0 0 40px rgba(255,182,193,0.8);
+  color:#f6c1d8;
+  text-shadow:0 0 70px rgba(255,182,193,1);
   transition:opacity 2s ease;
   z-index:6;
 }
@@ -113,127 +115,166 @@ button{
 
 <script>
 let scene=new THREE.Scene();
-let camera=new THREE.PerspectiveCamera(75,window.innerWidth/window.innerHeight,0.1,5000);
+let camera=new THREE.PerspectiveCamera(
+  60,
+  window.innerWidth/window.innerHeight,
+  1,
+  10000
+);
+
 let renderer=new THREE.WebGLRenderer({antialias:true});
 renderer.setSize(window.innerWidth,window.innerHeight);
+renderer.setPixelRatio(window.devicePixelRatio);
 document.body.appendChild(renderer.domElement);
-camera.position.z=1000;
+
+camera.position.z=1200;
+
+/* HANDLE RESIZE */
+window.addEventListener("resize",()=>{
+  camera.aspect=window.innerWidth/window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth,window.innerHeight);
+});
 
 /* STAR FIELD */
 const starGeo=new THREE.BufferGeometry();
-const starCount=40000;
+const starCount=60000;
 const positions=[];
 
 for(let i=0;i<starCount;i++){
   positions.push(
-    (Math.random()-0.5)*5000,
-    (Math.random()-0.5)*3000,
-    (Math.random()-0.5)*3000
+    (Math.random()-0.5)*8000,
+    (Math.random()-0.5)*6000,
+    Math.random()*-6000
   );
 }
 
 starGeo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
+
 const starMat=new THREE.PointsMaterial({
   color:0xffffff,
-  size:1.5
+  size:1.4
 });
+
 const stars=new THREE.Points(starGeo,starMat);
 scene.add(stars);
 
-/* SIMPLE PINK CONSTELLATION CUPID */
-const cupidGeo=new THREE.BufferGeometry();
-const cupidPositions=[];
-for(let i=0;i<8000;i++){
-  let x=Math.random()*400-300;
-  let y=Math.random()*300-150;
-  cupidPositions.push(x,y,Math.random()*30-15);
-}
-cupidGeo.setAttribute('position',new THREE.Float32BufferAttribute(cupidPositions,3));
-const cupidMat=new THREE.PointsMaterial({
-  color:0xf8c8dc,
-  size:2
-});
-const cupid=new THREE.Points(cupidGeo,cupidMat);
-cupid.position.set(-350,0,0);
-scene.add(cupid);
+let warp=false;
+let warpSpeed=0;
 
-/* ARROW */
-let arrow=new THREE.Mesh(
-  new THREE.CylinderGeometry(5,5,400,12),
-  new THREE.MeshBasicMaterial({color:0xffffff})
-);
-arrow.rotation.z=Math.PI/4;
-arrow.position.set(-200,-150,0);
-arrow.visible=false;
-scene.add(arrow);
+/* COMET */
+let comet, halo;
+let cometTrail=[];
+let cometActive=false;
+let cometProgress=0;
 
-/* TRAIL */
-function createTrail(x,y){
-  let star=new THREE.Mesh(
-    new THREE.SphereGeometry(3,6,6),
-    new THREE.MeshBasicMaterial({color:0xf8c8dc})
-  );
-  star.position.set(x,y,0);
-  scene.add(star);
+function createComet(){
+  const geometry=new THREE.SphereGeometry(10,16,16);
+  const material=new THREE.MeshBasicMaterial({color:0xf6c1d8});
+  comet=new THREE.Mesh(geometry,material);
 
-  let fade=setInterval(()=>{
-    star.scale.multiplyScalar(0.9);
-    star.material.opacity-=0.05;
-    star.material.transparent=true;
-    if(star.material.opacity<=0){
-      scene.remove(star);
-      clearInterval(fade);
-    }
-  },30);
+  const haloGeo=new THREE.SphereGeometry(30,16,16);
+  const haloMat=new THREE.MeshBasicMaterial({
+    color:0xf6c1d8,
+    transparent:true,
+    opacity:0.25
+  });
+  halo=new THREE.Mesh(haloGeo,haloMat);
+
+  comet.position.set(-window.innerWidth, -window.innerHeight/2, -800);
+  halo.position.copy(comet.position);
+
+  scene.add(comet);
+  scene.add(halo);
+
+  cometActive=true;
+  cometProgress=0;
 }
 
-let zoom=false;
-let finalState=false;
+function createTrail(x,y,z){
+  const geo=new THREE.SphereGeometry(4,8,8);
+  const mat=new THREE.MeshBasicMaterial({
+    color:0xf6c1d8,
+    transparent:true,
+    opacity:0.8
+  });
+  const particle=new THREE.Mesh(geo,mat);
+  particle.position.set(x,y,z);
+  scene.add(particle);
+  cometTrail.push(particle);
+}
 
 function animate(){
   requestAnimationFrame(animate);
 
-  stars.rotation.y+=0.0005;
+  if(warp){
+    let arr=starGeo.attributes.position.array;
+    for(let i=2;i<arr.length;i+=3){
+      arr[i]+=warpSpeed;
+      if(arr[i]>0){
+        arr[i]=-6000;
+      }
+    }
+    starGeo.attributes.position.needsUpdate=true;
+  } else {
+    stars.rotation.y+=0.00025;
+  }
 
-  if(zoom){
-    camera.position.z-=3;
+  if(cometActive){
+    cometProgress+=0.015;
+
+    let x=-2000 + cometProgress*4000;
+    let y=Math.sin(cometProgress*Math.PI)*800;
+
+    comet.position.set(x,y,-800);
+    halo.position.copy(comet.position);
+
+    createTrail(x,y,-800);
+
+    cometTrail.forEach((p,index)=>{
+      p.scale.multiplyScalar(0.95);
+      p.material.opacity-=0.02;
+      if(p.material.opacity<=0){
+        scene.remove(p);
+        cometTrail.splice(index,1);
+      }
+    });
+
+    if(cometProgress>=1){
+      cometActive=false;
+      scene.remove(comet);
+      scene.remove(halo);
+
+      warpSpeed=8;
+
+      setTimeout(()=>{
+        document.getElementById("cosmicYes").style.opacity=1;
+      },300);
+
+      setTimeout(()=>{
+        warpSpeed=30;
+      },2000);
+    }
   }
 
   renderer.render(scene,camera);
 }
+
 animate();
 
 /* YES CLICK */
 document.getElementById("yes").onclick=function(){
   document.getElementById("music").play();
   document.getElementById("ui").style.opacity=0;
-  arrow.visible=true;
 
-  let shoot=setInterval(()=>{
-    arrow.position.x+=20;
-    arrow.position.y+=20;
-    createTrail(arrow.position.x,arrow.position.y);
-
-    if(arrow.position.x>200){
-      clearInterval(shoot);
-
-      zoom=true;
-      cupid.visible=false;
-
-      setTimeout(()=>{
-        document.getElementById("cosmicYes").style.opacity=1;
-      },800);
-    }
-  },20);
+  warp=true;
+  warpSpeed=30;
+  createComet();
 };
 
-/* NO LOGIC */
-let noClicks=0;
+/* NO */
 document.getElementById("no").onclick=function(){
-  noClicks++;
-  if(noClicks==1) alert("Are you sure? 🥺");
-  else if(noClicks==2) alert("Really? 😭");
-  else this.remove();
+  alert("Nice try 😌");
 };
 </script>
 
