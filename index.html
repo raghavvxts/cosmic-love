@@ -13,18 +13,39 @@ body{
   overflow:hidden;
   background:black;
   font-family:'Poppins',sans-serif;
-  color:#ffb6d9;
+  color:gold;
 }
-
 canvas{position:fixed;top:0;left:0;}
 
-#fadeBlack{
+/* Moving Golden Spotlight */
+#beamOverlay{
   position:fixed;
   inset:0;
-  background:black;
-  opacity:1;
+  pointer-events:none;
+  background:radial-gradient(circle at 20% 40%,
+    rgba(255,215,0,0.6) 0%,
+    rgba(255,215,0,0.3) 20%,
+    rgba(0,0,0,0.95) 65%);
+  transition:background 1s linear;
+  z-index:4;
+}
+
+/* Volumetric Rays */
+#rays{
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  background:repeating-linear-gradient(
+    90deg,
+    rgba(255,215,0,0.08) 0px,
+    rgba(255,215,0,0.08) 2px,
+    transparent 2px,
+    transparent 20px
+  );
+  opacity:0;
   transition:opacity 3s ease;
-  z-index:10;
+  z-index:3;
+  mix-blend-mode:screen;
 }
 
 #ui{
@@ -40,47 +61,52 @@ canvas{position:fixed;top:0;left:0;}
   z-index:5;
 }
 
-#photo{
-  width:240px;
-  height:240px;
-  border-radius:50%;
-  background:url("us2.jpg") center/cover no-repeat;
-  margin-bottom:30px;
-  box-shadow:0 0 120px rgba(255,105,180,1);
-}
-
 h1{
   font-family:'Playfair Display',serif;
-  font-size:50px;
-  letter-spacing:2px;
+  font-size:48px;
 }
 
-#movieTitle{
-  position:absolute;
-  bottom:10%;
-  width:100%;
-  text-align:center;
-  font-size:60px;
-  font-family:'Playfair Display',serif;
-  letter-spacing:3px;
-  opacity:0;
-  transition:opacity 4s ease;
-  z-index:6;
+h2{
+  font-weight:300;
+  font-size:20px;
+  margin-bottom:30px;
 }
+
+button{
+  padding:14px 36px;
+  font-size:18px;
+  border:none;
+  border-radius:50px;
+  cursor:pointer;
+  margin:8px 15px;
+  transition:.3s ease;
+}
+
+#yes{
+  background:linear-gradient(45deg,gold,#ffd700);
+  color:black;
+}
+#yes:hover{transform:scale(1.1);}
+#no{background:#333;color:#ccc;}
+#message{margin-top:15px;color:#ff6b9a;}
 </style>
 </head>
 <body>
 
-<div id="fadeBlack"></div>
-
-<div id="ui">
-  <div id="photo"></div>
-  <h1>Will you be my prom date?</h1>
-</div>
-
-<div id="movieTitle">A Cosmic Love Story</div>
+<div id="beamOverlay"></div>
+<div id="rays"></div>
 
 <audio id="music" src="song.mp3"></audio>
+
+<div id="ui">
+  <h1>Will you be my prom date?</h1>
+  <h2>Vedanshi ♊</h2>
+  <div>
+    <button id="yes">Okiee Yaawr! 💛</button>
+    <button id="no">No</button>
+  </div>
+  <div id="message"></div>
+</div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
@@ -90,10 +116,9 @@ let camera=new THREE.PerspectiveCamera(75,window.innerWidth/window.innerHeight,0
 let renderer=new THREE.WebGLRenderer({antialias:true});
 renderer.setSize(window.innerWidth,window.innerHeight);
 document.body.appendChild(renderer.domElement);
+camera.position.z=900;
 
-camera.position.z=600;
-
-/* STAR FIELD */
+/* GOLD BACKGROUND STARS */
 function createStars(count,spread,size,color){
   const geo=new THREE.BufferGeometry();
   const pos=[];
@@ -105,133 +130,84 @@ function createStars(count,spread,size,color){
     );
   }
   geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
-  const mat=new THREE.PointsMaterial({
-    size:size,
-    color:color,
-    transparent:true,
-    opacity:0.8
-  });
+  const mat=new THREE.PointsMaterial({size:size,color:color});
   const stars=new THREE.Points(geo,mat);
   scene.add(stars);
-  return stars;
 }
+createStars(60000,5000,2,0xffd700);
 
-let outerStars=createStars(50000,3000,2,0xff99cc);
-let haloStars=createStars(30000,1000,3,0xff4da6);
+/* PINK CUPID */
+const cupidGeo=new THREE.BufferGeometry();
+const cupidPos=[];
+for(let i=0;i<20000;i++){
+  let x=Math.random()*400-300;
+  let y=Math.random()*300-150;
+  if(x < -50) y+=Math.sin(x*0.05)*60;
+  if(x > -100 && x < 0) y*=0.6;
+  cupidPos.push(x,y,Math.random()*50-25);
+}
+cupidGeo.setAttribute('position',new THREE.Float32BufferAttribute(cupidPos,3));
+const cupidMat=new THREE.PointsMaterial({size:3,color:0xff69b4});
+const cupid=new THREE.Points(cupidGeo,cupidMat);
+cupid.position.set(-250,0,0);
+scene.add(cupid);
 
-/* CUPID GLOW */
-const bow=new THREE.Mesh(
-  new THREE.TorusGeometry(120,5,16,100,Math.PI),
-  new THREE.MeshBasicMaterial({color:0xff4da6})
-);
-scene.add(bow);
+/* Smooth Spotlight Animation */
+let beamX = 20;
+let targetX = 50;
+let startTime = Date.now();
+let duration = 6000; // 6 seconds
 
-/* OUTER GLOW RING (fake bloom) */
-const glowRing=new THREE.Mesh(
-  new THREE.TorusGeometry(140,20,16,100,Math.PI),
-  new THREE.MeshBasicMaterial({
-    color:0xff66b2,
-    transparent:true,
-    opacity:0.3
-  })
-);
-scene.add(glowRing);
+function updateBeam(){
+  let elapsed = Date.now() - startTime;
+  let progress = Math.min(elapsed / duration, 1);
+  let currentX = 20 + (50 - 20) * progress;
 
-/* ARROW */
-let arrow=new THREE.Mesh(
-  new THREE.CylinderGeometry(5,5,400,16),
-  new THREE.MeshBasicMaterial({color:0xffffff})
-);
-arrow.rotation.z=Math.PI/2;
-arrow.position.set(-1500,0,0);
-scene.add(arrow);
+  document.getElementById("beamOverlay").style.background =
+    `radial-gradient(circle at ${currentX}% 40%,
+      rgba(255,215,0,0.6) 0%,
+      rgba(255,215,0,0.3) 20%,
+      rgba(0,0,0,0.95) 65%)`;
 
-let time=0;
-let fired=false;
-let impact=false;
-let slowMotion=false;
-
-/* BURST */
-function burst(){
-  for(let i=0;i<500;i++){
-    let star=new THREE.Mesh(
-      new THREE.SphereGeometry(6,8,8),
-      new THREE.MeshBasicMaterial({color:0xff4da6})
-    );
-    star.position.set(0,0,0);
-    scene.add(star);
-
-    let dx=(Math.random()-0.5)*80;
-    let dy=(Math.random()-0.5)*80;
-    let dz=(Math.random()-0.5)*80;
-
-    let life=setInterval(()=>{
-      star.position.x+=dx;
-      star.position.y+=dy;
-      star.position.z+=dz;
-      star.material.opacity-=0.02;
-      star.material.transparent=true;
-      if(star.material.opacity<=0){
-        scene.remove(star);
-        clearInterval(life);
-      }
-    },30);
+  if(progress < 1){
+    requestAnimationFrame(updateBeam);
+  } else {
+    document.getElementById("rays").style.opacity = 1;
+    document.getElementById("ui").style.opacity = 1;
   }
 }
 
+setTimeout(updateBeam,2000);
+
+/* RENDER LOOP */
 function animate(){
   requestAnimationFrame(animate);
-
-  let speed=slowMotion?0.25:1;
-  time+=0.01*speed;
-
-  camera.position.x=Math.sin(time*0.2)*800;
-  camera.lookAt(0,0,0);
-
-  haloStars.rotation.y+=0.003*speed;
-  outerStars.rotation.y+=0.001*speed;
-
-  let pulse=1+Math.sin(time*3)*0.1;
-  bow.scale.set(pulse,pulse,1);
-  glowRing.scale.set(pulse*1.1,pulse*1.1,1);
-
-  if(time>5 && !fired){
-    fired=true;
-  }
-
-  if(fired && arrow.position.x<0){
-    arrow.position.x+=40*speed;
-  }
-
-  if(fired && arrow.position.x>=0 && !impact){
-    impact=true;
-    slowMotion=true;
-    burst();
-
-    setTimeout(()=>{
-      slowMotion=false;
-
-      document.getElementById("fadeBlack").style.opacity=1;
-
-      setTimeout(()=>{
-        document.getElementById("ui").style.opacity=1;
-        document.getElementById("movieTitle").style.opacity=1;
-        document.getElementById("fadeBlack").style.opacity=0;
-      },2000);
-
-    },1500);
-  }
-
+  cupid.rotation.y+=0.0005;
   renderer.render(scene,camera);
 }
-
 animate();
 
-/* Intro fade */
-setTimeout(()=>{
-  document.getElementById("fadeBlack").style.opacity=0;
+/* BUTTON LOGIC */
+let noClicks=0;
+const noBtn=document.getElementById("no");
+const yesBtn=document.getElementById("yes");
+const message=document.getElementById("message");
+
+noBtn.onclick=function(){
+  noClicks++;
+  if(noClicks==1) message.innerText="Are you sure? 🥺";
+  else if(noClicks==2) message.innerText="Really? 😭";
+  else{
+    message.innerText="You are evil 😤";
+    noBtn.style.opacity="0";
+    setTimeout(()=>noBtn.remove(),1000);
+  }
+  yesBtn.style.transform="scale("+(1+noClicks*0.4)+")";
+};
+
+yesBtn.onclick=function(){
   document.getElementById("music").play();
-},1000);
+};
 </script>
 </body>
 </html>
