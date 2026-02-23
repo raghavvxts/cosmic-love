@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Vedanshi ♊</title>
 
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Poppins:wght@300;400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=Poppins:wght@300;400&display=swap" rel="stylesheet">
 
 <style>
 body{
@@ -13,40 +13,10 @@ body{
   overflow:hidden;
   background:black;
   font-family:'Poppins',sans-serif;
-  color:gold;
+  color:#d4af37;
 }
+
 canvas{position:fixed;top:0;left:0;}
-
-/* Moving Golden Spotlight */
-#beamOverlay{
-  position:fixed;
-  inset:0;
-  pointer-events:none;
-  background:radial-gradient(circle at 20% 40%,
-    rgba(255,215,0,0.6) 0%,
-    rgba(255,215,0,0.3) 20%,
-    rgba(0,0,0,0.95) 65%);
-  transition:background 1s linear;
-  z-index:4;
-}
-
-/* Volumetric Rays */
-#rays{
-  position:fixed;
-  inset:0;
-  pointer-events:none;
-  background:repeating-linear-gradient(
-    90deg,
-    rgba(255,215,0,0.08) 0px,
-    rgba(255,215,0,0.08) 2px,
-    transparent 2px,
-    transparent 20px
-  );
-  opacity:0;
-  transition:opacity 3s ease;
-  z-index:3;
-  mix-blend-mode:screen;
-}
 
 #ui{
   position:absolute;
@@ -56,49 +26,63 @@ canvas{position:fixed;top:0;left:0;}
   align-items:center;
   justify-content:center;
   text-align:center;
-  opacity:0;
-  transition:opacity 3s ease;
   z-index:5;
+}
+
+#photo{
+  width:220px;
+  height:220px;
+  border-radius:50%;
+  background:url("us2.jpg") center/cover no-repeat;
+  box-shadow:0 0 40px rgba(255,192,203,0.6);
+  margin-bottom:30px;
 }
 
 h1{
   font-family:'Playfair Display',serif;
-  font-size:48px;
+  font-size:42px;
+  margin-bottom:10px;
 }
 
 h2{
   font-weight:300;
-  font-size:20px;
-  margin-bottom:30px;
+  margin-bottom:25px;
 }
 
 button{
   padding:14px 36px;
-  font-size:18px;
   border:none;
-  border-radius:50px;
+  border-radius:40px;
+  font-size:16px;
+  margin:10px;
   cursor:pointer;
-  margin:8px 15px;
-  transition:.3s ease;
+  transition:0.3s ease;
 }
 
 #yes{
-  background:linear-gradient(45deg,gold,#ffd700);
+  background:#d4af37;
   color:black;
 }
-#yes:hover{transform:scale(1.1);}
-#no{background:#333;color:#ccc;}
-#message{margin-top:15px;color:#ff6b9a;}
+
+#yes:hover{transform:scale(1.08);}
+
+#no{
+  background:#333;
+  color:#ccc;
+}
+
+#message{
+  margin-top:15px;
+  color:pink;
+}
 </style>
 </head>
 <body>
 
-<div id="beamOverlay"></div>
-<div id="rays"></div>
-
 <audio id="music" src="song.mp3"></audio>
 
 <div id="ui">
+  <div id="photo"></div>
   <h1>Will you be my prom date?</h1>
   <h2>Vedanshi ♊</h2>
   <div>
@@ -112,77 +96,68 @@ button{
 
 <script>
 let scene=new THREE.Scene();
+scene.fog=new THREE.Fog(0x000000,500,2000);
+
 let camera=new THREE.PerspectiveCamera(75,window.innerWidth/window.innerHeight,0.1,5000);
 let renderer=new THREE.WebGLRenderer({antialias:true});
 renderer.setSize(window.innerWidth,window.innerHeight);
 document.body.appendChild(renderer.domElement);
-camera.position.z=900;
+camera.position.z=1000;
 
-/* GOLD BACKGROUND STARS */
-function createStars(count,spread,size,color){
-  const geo=new THREE.BufferGeometry();
-  const pos=[];
-  for(let i=0;i<count;i++){
-    pos.push(
-      (Math.random()-0.5)*spread,
-      (Math.random()-0.5)*spread,
-      (Math.random()-0.5)*spread
-    );
-  }
-  geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));
-  const mat=new THREE.PointsMaterial({size:size,color:color});
-  const stars=new THREE.Points(geo,mat);
-  scene.add(stars);
+/* GOLD STAR FIELD */
+const starGeo=new THREE.BufferGeometry();
+const starCount=40000;
+const positions=[];
+
+for(let i=0;i<starCount;i++){
+  positions.push(
+    (Math.random()-0.5)*5000,
+    (Math.random()-0.5)*3000,
+    (Math.random()-0.5)*3000
+  );
 }
-createStars(60000,5000,2,0xffd700);
 
-/* PINK CUPID */
+starGeo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
+const starMat=new THREE.PointsMaterial({
+  color:0xd4af37,
+  size:2
+});
+const stars=new THREE.Points(starGeo,starMat);
+scene.add(stars);
+
+/* PINK CUPID CONSTELLATION */
 const cupidGeo=new THREE.BufferGeometry();
-const cupidPos=[];
-for(let i=0;i<20000;i++){
+const cupidPositions=[];
+
+for(let i=0;i<12000;i++){
   let x=Math.random()*400-300;
   let y=Math.random()*300-150;
-  if(x < -50) y+=Math.sin(x*0.05)*60;
-  if(x > -100 && x < 0) y*=0.6;
-  cupidPos.push(x,y,Math.random()*50-25);
+  if(x < -100) y+=Math.sin(x*0.05)*60;
+  cupidPositions.push(x,y,Math.random()*50-25);
 }
-cupidGeo.setAttribute('position',new THREE.Float32BufferAttribute(cupidPos,3));
-const cupidMat=new THREE.PointsMaterial({size:3,color:0xff69b4});
+
+cupidGeo.setAttribute('position',new THREE.Float32BufferAttribute(cupidPositions,3));
+const cupidMat=new THREE.PointsMaterial({
+  color:0xff69b4,
+  size:3
+});
 const cupid=new THREE.Points(cupidGeo,cupidMat);
-cupid.position.set(-250,0,0);
+cupid.position.set(-300,0,0);
 scene.add(cupid);
 
-/* Smooth Spotlight Animation */
-let beamX = 20;
-let targetX = 50;
-let startTime = Date.now();
-let duration = 6000; // 6 seconds
+/* SOFT SPOTLIGHT */
+const spotLight=new THREE.SpotLight(0xffd700,1.2);
+spotLight.position.set(-500,800,500);
+spotLight.angle=Math.PI/6;
+spotLight.penumbra=0.5;
+spotLight.target=cupid;
+scene.add(spotLight);
 
-function updateBeam(){
-  let elapsed = Date.now() - startTime;
-  let progress = Math.min(elapsed / duration, 1);
-  let currentX = 20 + (50 - 20) * progress;
-
-  document.getElementById("beamOverlay").style.background =
-    `radial-gradient(circle at ${currentX}% 40%,
-      rgba(255,215,0,0.6) 0%,
-      rgba(255,215,0,0.3) 20%,
-      rgba(0,0,0,0.95) 65%)`;
-
-  if(progress < 1){
-    requestAnimationFrame(updateBeam);
-  } else {
-    document.getElementById("rays").style.opacity = 1;
-    document.getElementById("ui").style.opacity = 1;
-  }
-}
-
-setTimeout(updateBeam,2000);
-
-/* RENDER LOOP */
+/* ANIMATION */
 function animate(){
   requestAnimationFrame(animate);
-  cupid.rotation.y+=0.0005;
+  stars.rotation.y+=0.0005;
+  cupid.rotation.y+=0.0002;
   renderer.render(scene,camera);
 }
 animate();
@@ -199,15 +174,16 @@ noBtn.onclick=function(){
   else if(noClicks==2) message.innerText="Really? 😭";
   else{
     message.innerText="You are evil 😤";
-    noBtn.style.opacity="0";
-    setTimeout(()=>noBtn.remove(),1000);
+    noBtn.remove();
   }
-  yesBtn.style.transform="scale("+(1+noClicks*0.4)+")";
+  yesBtn.style.transform="scale("+(1+noClicks*0.3)+")";
 };
 
 yesBtn.onclick=function(){
   document.getElementById("music").play();
+  camera.position.z-=200;
 };
 </script>
+
 </body>
 </html>
