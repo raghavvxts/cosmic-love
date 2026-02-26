@@ -274,6 +274,29 @@ canvas{position:fixed;top:0;left:0;z-index:0;}
   transition:opacity .35s ease-out;
 }
 
+@keyframes constGlow{
+  0%{transform:scale(1);opacity:1;}
+  40%{transform:scale(1.02);opacity:1;}
+  100%{transform:scale(1);opacity:1;}
+}
+.name-const-wrap.glow{
+  animation:constGlow 1.4s ease-out 1;
+}
+
+/* Final photo orb + breathing title */
+#finalPhoto{
+  width:110px;
+  height:110px;
+  margin:0 auto 20px;
+  border-radius:50%;
+  background:url("us2.jpg") center/cover no-repeat;
+  box-shadow:0 0 40px rgba(246,193,216,0.9);
+}
+@keyframes finalTitleBreath{
+  0%,100%{transform:scale(1);}
+  50%{transform:scale(1.03);}
+}
+
 /* SCREEN 2: QUIZ */
 #quiz .question-box{
   background:rgba(20,20,30,0.8);
@@ -460,11 +483,7 @@ canvas{position:fixed;top:0;left:0;z-index:0;}
   color:#f6c1d8;
   text-shadow:0 0 80px rgba(255,182,193,1),0 0 120px rgba(255,182,193,0.6);
   margin-bottom:20px;
-  animation:successPulse 2s ease-in-out infinite;
-}
-@keyframes successPulse{
-  0%,100%{transform:scale(1);}
-  50%{transform:scale(1.02);}
+  animation:finalTitleBreath 6s ease-in-out infinite;
 }
 #success .sub{
   font-size:clamp(16px,2vw,22px);
@@ -601,6 +620,7 @@ canvas{position:fixed;top:0;left:0;z-index:0;}
 
 <!-- SCREEN 4: SUCCESS -->
 <div id="success" class="screen">
+  <div id="finalPhoto"></div>
   <h1 id="cosmicYes">A Cosmic Yes.</h1>
   <p class="sub">See you at the stars, Vedanshi 💗</p>
   <div id="confetti"></div>
@@ -649,9 +669,9 @@ function stepIntro(timestamp){
   const duration = 4500;
   const t = Math.min(1, (timestamp - introStartTime) / duration);
 
-  // arrow starts near cupid's bow on the left and flies across to the right
-  const startX = 32, endX = 86;
-  const startY = 52, endY = 40;
+  // arrow starts from cupid's bow on the left and flies across to the right
+  const startX = 36, endX = 86;
+  const startY = 30, endY = 26;
   const x = startX + (endX - startX) * t;
   const y = startY + (endY - startY) * t;
 
@@ -768,14 +788,33 @@ window.addEventListener("resize",()=>{
   renderer.setSize(window.innerWidth,window.innerHeight);
 });
 
+// Background starfield (always twinkling)
+const bgGeo=new THREE.BufferGeometry();
+const bgCount=60000;
+const bgPositions=[];
+for(let i=0;i<bgCount;i++){
+  bgPositions.push(
+    (Math.random()-0.5)*10000,
+    (Math.random()-0.5)*8000,
+    Math.random()*-9000
+  );
+}
+bgGeo.setAttribute('position',new THREE.Float32BufferAttribute(bgPositions,3));
+const bgStars=new THREE.Points(
+  bgGeo,
+  new THREE.PointsMaterial({color:0xffffff,size:1.1,opacity:0.75,transparent:true})
+);
+scene.add(bgStars);
+
+// Foreground starfield used for warp/comet effect
 const starGeo=new THREE.BufferGeometry();
-const starCount=60000;
+const starCount=40000;
 const positions=[];
 for(let i=0;i<starCount;i++){
   positions.push((Math.random()-0.5)*8000,(Math.random()-0.5)*6000,Math.random()*-6000);
 }
 starGeo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
-const stars=new THREE.Points(starGeo,new THREE.PointsMaterial({color:0xffffff,size:1.4}));
+const stars=new THREE.Points(starGeo,new THREE.PointsMaterial({color:0xffffff,size:1.5}));
 scene.add(stars);
 
 let warp=false,warpSpeed=0;
@@ -852,6 +891,9 @@ function drawNameConstellation(){
 
     offsetX+=spacing;
   }
+
+  // small glow when the last segments have drawn
+  setTimeout(()=>{wrap.classList.add('glow');},delay+300);
 }
 
 function createComet(){
@@ -878,7 +920,12 @@ function createTrail(x,y,z){
 
 function animate(){
   requestAnimationFrame(animate);
+
+  // background stars always rotate slowly to keep sky alive
+  bgStars.rotation.y+=0.00012;
+
   if(warp){
+    // foreground starfield warps towards the camera
     let arr=starGeo.attributes.position.array;
     for(let i=2;i<arr.length;i+=3){
       arr[i]+=warpSpeed;
@@ -886,6 +933,7 @@ function animate(){
     }
     starGeo.attributes.position.needsUpdate=true;
   } else {
+    // gentle rotation when not warping
     stars.rotation.y+=0.00025;
   }
 
@@ -906,7 +954,7 @@ function animate(){
     if(cometProgress>=1){
       cometActive=false;
       scene.remove(comet);scene.remove(halo);
-      warpSpeed=8;
+      warpSpeed=14;
       setTimeout(()=>{
         showScreen('success');
         spawnConfetti();
@@ -935,7 +983,7 @@ document.getElementById('yes').onclick=function(){
     document.getElementById('proposal').style.display='none';
   },800);
   warp=true;
-  warpSpeed=30;
+  warpSpeed=42;
   createComet();
 };
 
